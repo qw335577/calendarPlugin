@@ -50,6 +50,7 @@ class CalendarEvent:
     uid: str
     description: str
     wuxing: str
+    order: int
 
 
 def _fold(line: str) -> str:
@@ -91,6 +92,7 @@ def _vevent(event: CalendarEvent, stamp: str) -> list[str]:
         f"SUMMARY:{_ics_text(event.title)}",
         f"DESCRIPTION:{_ics_text(event.description)}",
         "TRANSP:TRANSPARENT",
+        f"PRIORITY:{1 if event.order == 0 else 5 if event.order == 1 else 9}",
         "STATUS:CONFIRMED",
         "END:VEVENT",
     ]
@@ -106,7 +108,7 @@ def build_calendar(name: str, color: str, events: list[CalendarEvent], stamp: st
         f"X-WR-CALNAME:{_ics_text(name)}",
         f"X-APPLE-CALENDAR-COLOR:{color}",
     ]
-    for event in events:
+    for event in sorted(events, key=lambda item: (item.start, item.order, item.uid)):
         lines.extend(_vevent(event, stamp))
     lines.append("END:VCALENDAR")
     return "\r\n".join(_fold(line) for line in lines) + "\r\n"
@@ -129,20 +131,22 @@ def collect_events(start: date, end: date) -> list[CalendarEvent]:
             CalendarEvent(
                 start=day,
                 end_exclusive=next_day,
-                title=pillar.stem,
+                title=f"1{pillar.stem}",
                 uid=f"ganzhi-{stamp}-gan@{DOMAIN}",
                 description="天干",
                 wuxing=pillar.wuxing,
+                order=1,
             )
         )
         events.append(
             CalendarEvent(
                 start=day,
                 end_exclusive=next_day,
-                title=pillar.branch,
+                title=f"2{pillar.branch}",
                 uid=f"ganzhi-{stamp}-zhi@{DOMAIN}",
                 description="地支",
                 wuxing=pillar.branch_wuxing,
+                order=2,
             )
         )
     for command in month_commands(start, end):
@@ -150,10 +154,11 @@ def collect_events(start: date, end: date) -> list[CalendarEvent]:
             CalendarEvent(
                 start=command.start,
                 end_exclusive=command.end_exclusive,
-                title=command.title,
+                title=f"0{command.title}",
                 uid=f"yueling-{command.start.strftime('%Y%m%d')}-{command.branch}@{DOMAIN}",
                 description=f"月令 {command.ganzhi}",
                 wuxing=command.branch_wuxing,
+                order=0,
             )
         )
     return events
