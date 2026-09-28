@@ -1,4 +1,4 @@
-"""依日干五行產出五份 ICS 訂閱日曆。兩套干支算法不一致時會中止、不寫檔。"""
+"""依天干、地支各自的五行產出五份 ICS。兩套干支算法不一致時會中止、不寫檔。"""
 
 from __future__ import annotations
 
@@ -6,32 +6,37 @@ import argparse
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
-from ganzhi import DayPillar, day_pillar
+from ganzhi import day_pillar
 
 WUXING_CALENDARS = {
     "木": {
         "filename": "mu.ics",
         "name": "日柱·木",
+        "members": "甲乙寅卯",
         "color": "#2E7D32",
     },
     "火": {
         "filename": "huo.ics",
         "name": "日柱·火",
+        "members": "丙丁巳午",
         "color": "#C62828",
     },
     "土": {
         "filename": "tu.ics",
         "name": "日柱·土",
+        "members": "戊己丑辰未戌",
         "color": "#F9A825",
     },
     "金": {
         "filename": "jin.ics",
         "name": "日柱·金",
+        "members": "庚辛申酉",
         "color": "#C9A227",
     },
     "水": {
         "filename": "shui.ics",
         "name": "日柱·水",
+        "members": "壬癸亥子",
         "color": "#1565C0",
     },
 }
@@ -69,22 +74,26 @@ def _ics_text(value: str) -> str:
     )
 
 
-def _vevent(d: date, pillar: DayPillar, stamp: str) -> list[str]:
+def _vevent(d: date, title: str, kind: str, stamp: str) -> list[str]:
     next_day = d + timedelta(days=1)
+    label = "天干" if kind == "gan" else "地支"
     return [
         "BEGIN:VEVENT",
-        f"UID:ganzhi-{d.strftime('%Y%m%d')}-{pillar.wuxing}@{DOMAIN}",
+        f"UID:ganzhi-{d.strftime('%Y%m%d')}-{kind}@{DOMAIN}",
         f"DTSTAMP:{stamp}",
         f"DTSTART;VALUE=DATE:{d.strftime('%Y%m%d')}",
         f"DTEND;VALUE=DATE:{next_day.strftime('%Y%m%d')}",
-        f"SUMMARY:{_ics_text(pillar.ganzhi)}",
+        f"SUMMARY:{_ics_text(title)}",
+        f"DESCRIPTION:{label}",
         "TRANSP:TRANSPARENT",
         "STATUS:CONFIRMED",
         "END:VEVENT",
     ]
 
 
-def build_calendar(name: str, color: str, events: list[tuple[date, DayPillar]], stamp: str) -> str:
+def build_calendar(
+    name: str, color: str, events: list[tuple[date, str, str]], stamp: str
+) -> str:
     lines = [
         "BEGIN:VCALENDAR",
         "VERSION:2.0",
@@ -94,8 +103,8 @@ def build_calendar(name: str, color: str, events: list[tuple[date, DayPillar]], 
         f"X-WR-CALNAME:{_ics_text(name)}",
         f"X-APPLE-CALENDAR-COLOR:{color}",
     ]
-    for d, pillar in events:
-        lines.extend(_vevent(d, pillar, stamp))
+    for d, title, kind in events:
+        lines.extend(_vevent(d, title, kind, stamp))
     lines.append("END:VCALENDAR")
     return "\r\n".join(_fold(line) for line in lines) + "\r\n"
 
@@ -108,10 +117,11 @@ def daterange(start: date, end: date):
 
 
 def generate(start: date, end: date, output_dirs: list[Path]) -> dict[str, int]:
-    grouped: dict[str, list[tuple[date, DayPillar]]] = {key: [] for key in WUXING_CALENDARS}
+    grouped: dict[str, list[tuple[date, str, str]]] = {key: [] for key in WUXING_CALENDARS}
     for day in daterange(start, end):
         pillar = day_pillar(day)
-        grouped[pillar.wuxing].append((day, pillar))
+        grouped[pillar.wuxing].append((day, pillar.stem, "gan"))
+        grouped[pillar.branch_wuxing].append((day, pillar.branch, "zhi"))
 
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     counts = {key: len(items) for key, items in grouped.items()}
@@ -148,7 +158,7 @@ def main() -> None:
     counts = generate(start, end, [args.out, public_calendars])
 
     total = sum(counts.values())
-    print(f"已產出 {start.isoformat()} 至 {end.isoformat()}，共 {total} 天：")
+    print(f"已產出 {start.isoformat()} 至 {end.isoformat()}，共 {total} 筆（每天天干+地支）：")
     for wuxing, meta in WUXING_CALENDARS.items():
         print(f"  {meta['name']} ({meta['filename']}): {counts[wuxing]} 筆")
     print(f"輸出目錄：{args.out} 與 {public_calendars}")

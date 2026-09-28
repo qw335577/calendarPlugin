@@ -71,40 +71,40 @@
 <body>
   <main>
     <h1>日柱天干地支</h1>
-    <p class="lead">在 iPhone 日曆訂閱五本日曆後，每天會出現全天事件，標題為當日干支，顏色依日干五行。</p>
+    <p class="lead">每天兩條全天事件：天干一色、地支一色。iPhone 無法在同一個標題裡上兩種顏色，所以拆成兩筆。</p>
 
     <div class="grid" id="links">
       <a class="cal" data-file="mu.ics" href="calendars/mu.ics">
-        <span class="left"><span class="swatch" style="background:#2E7D32"></span>日柱·木（甲乙）</span>
+        <span class="left"><span class="swatch" style="background:#2E7D32"></span>日柱·木（甲乙寅卯）</span>
         <span class="hint">訂閱</span>
       </a>
       <a class="cal" data-file="huo.ics" href="calendars/huo.ics">
-        <span class="left"><span class="swatch" style="background:#C62828"></span>日柱·火（丙丁）</span>
+        <span class="left"><span class="swatch" style="background:#C62828"></span>日柱·火（丙丁巳午）</span>
         <span class="hint">訂閱</span>
       </a>
       <a class="cal" data-file="tu.ics" href="calendars/tu.ics">
-        <span class="left"><span class="swatch" style="background:#F9A825"></span>日柱·土（戊己）</span>
+        <span class="left"><span class="swatch" style="background:#F9A825"></span>日柱·土（戊己丑辰未戌）</span>
         <span class="hint">訂閱</span>
       </a>
       <a class="cal" data-file="jin.ics" href="calendars/jin.ics">
-        <span class="left"><span class="swatch" style="background:#C9A227"></span>日柱·金（庚辛）</span>
+        <span class="left"><span class="swatch" style="background:#C9A227"></span>日柱·金（庚辛申酉）</span>
         <span class="hint">訂閱</span>
       </a>
       <a class="cal" data-file="shui.ics" href="calendars/shui.ics">
-        <span class="left"><span class="swatch" style="background:#1565C0"></span>日柱·水（壬癸）</span>
+        <span class="left"><span class="swatch" style="background:#1565C0"></span>日柱·水（壬癸亥子）</span>
         <span class="hint">訂閱</span>
       </a>
     </div>
 
     <h2>在 iPhone 上加入</h2>
     <ol>
-      <li>先把這個網站放到可公開的 HTTPS 網址（例如 GitHub Pages）。本機 <code>file://</code> 無法讓系統日曆訂閱。</li>
-      <li>用 Safari 打開本頁，依序點上面五個「訂閱」。若沒有跳出加入日曆，改走：設定 → 行事曆 → 帳號 → 新增帳號 → 其他 → 加入訂閱的行事曆，貼上各日曆的網址。</li>
-      <li>在日曆 App 左上角日曆列表裡確認五本都已開啟。若顏色不對，點「i」自行改成綠 / 紅 / 黃 / 金 / 藍。</li>
+      <li>不要走「新增帳號 / CalDAV」，那會出現「無法驗證帳戶資料」。正確是：<strong>設定 → 行事曆 → 帳號 → 新增帳號 → 其他 → 加入訂閱的行事曆</strong>。</li>
+      <li>伺服器網址貼下面的 <code>https://</code> 連結。說明、使用者、密碼全部留空，直接下一步。</li>
+      <li>木火土金水各加一次。完成後打開日曆 App，確認五本都開啟；顏色不對就點「i」改成綠 / 紅 / 黃 / 金 / 藍。</li>
     </ol>
 
     <div class="note">
-      <p>涵蓋 2024-01-01 至 2029-12-31。事件為全天、不佔忙碌。日柱依萬年曆（當天 0:00 換日），不是八字 23:00 換日。</p>
+      <p>涵蓋 2024-01-01 至 2029-12-31。每天會看到兩個字：天干、地支，顏色各跟自己的五行。請把五本日曆手動設成綠 / 紅 / 黃 / 金 / 藍。</p>
       <p class="hint" id="url-hint"></p>
     </div>
   </main>
@@ -113,18 +113,13 @@
     const base = location.href.replace(/index\.html(?:[?#].*)?$/, "");
     document.querySelectorAll("a.cal").forEach((link) => {
       const file = link.getAttribute("data-file");
-      const httpsUrl = new URL("calendars/" + file, base).href;
-      if (httpsPage) {
-        link.href = httpsUrl.replace(/^https:/, "webcal:");
-      } else {
-        link.href = "calendars/" + file;
-      }
+      link.href = httpsPage ? new URL("calendars/" + file, base).href : "calendars/" + file;
     });
     const hint = document.getElementById("url-hint");
     if (httpsPage) {
-      hint.textContent = "這五本日曆的網址會自動改成 webcal://，方便 iPhone 直接加入。";
+      hint.textContent = "請用 https:// 網址加入「訂閱的行事曆」，不要當成需要登入的帳號。";
     } else {
-      hint.textContent = "目前不是 HTTPS 頁面，連結先指向本機 ICS 檔。放到 GitHub Pages 後再用 Safari 打開即可訂閱。";
+      hint.textContent = "目前不是 HTTPS 頁面，連結先指向本機 ICS 檔。放到 GitHub Pages 後再用上面的步驟訂閱。";
     }
   </script>
 </body>

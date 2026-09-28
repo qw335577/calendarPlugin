@@ -91,6 +91,33 @@ class InvariantTests(unittest.TestCase):
             self.assertEqual(pillar.wuxing, mapping[pillar.stem])
             day += timedelta(days=1)
 
+    def test_wuxing_follows_day_branch(self):
+        mapping = {
+            "子": "水",
+            "丑": "土",
+            "寅": "木",
+            "卯": "木",
+            "辰": "土",
+            "巳": "火",
+            "午": "火",
+            "未": "土",
+            "申": "金",
+            "酉": "金",
+            "戌": "土",
+            "亥": "水",
+        }
+        day = date(2024, 1, 1)
+        for _ in range(60):
+            pillar = day_pillar(day)
+            self.assertEqual(pillar.branch_wuxing, mapping[pillar.branch])
+            day += timedelta(days=1)
+
+    def test_golden_dates_split_wuxing(self):
+        self.assertEqual(day_pillar(date(2001, 1, 1)).wuxing, "木")
+        self.assertEqual(day_pillar(date(2001, 1, 1)).branch_wuxing, "水")
+        self.assertEqual(day_pillar(date(1986, 5, 29)).wuxing, "水")
+        self.assertEqual(day_pillar(date(1986, 5, 29)).branch_wuxing, "金")
+
 
 class LunarPythonSweepTests(unittest.TestCase):
     @classmethod

@@ -21,6 +21,22 @@ STEM_WUXING = {
     "癸": "水",
 }
 
+# 地支本氣五行：亥子水、寅卯木、巳午火、申酉金、辰戌丑未土
+BRANCH_WUXING = {
+    "子": "水",
+    "丑": "土",
+    "寅": "木",
+    "卯": "木",
+    "辰": "土",
+    "巳": "火",
+    "午": "火",
+    "未": "土",
+    "申": "金",
+    "酉": "金",
+    "戌": "土",
+    "亥": "水",
+}
+
 # 2001-01-01 為甲子；該日正午儒略日 2451911 ≡ 1 (mod 60)
 _JIAZI_ORDINAL_ANCHOR = date(2001, 1, 1)
 
@@ -34,6 +50,7 @@ class DayPillar:
     stem: str
     branch: str
     wuxing: str
+    branch_wuxing: str
 
     @property
     def ganzhi(self) -> str:
@@ -78,4 +95,9 @@ def day_pillar(d: date) -> DayPillar:
             f"儒略日={jdn_pair[0]}{jdn_pair[1]}"
         )
     stem, branch = ordinal_pair
-    return DayPillar(stem=stem, branch=branch, wuxing=STEM_WUXING[stem])
+    return DayPillar(
+        stem=stem,
+        branch=branch,
+        wuxing=STEM_WUXING[stem],
+        branch_wuxing=BRANCH_WUXING[branch],
+    )
