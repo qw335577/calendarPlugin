@@ -1,48 +1,55 @@
-"""依天干、地支各自的五行產出五份 ICS。兩套干支算法不一致時會中止、不寫檔。"""
+"""依天干、日支、月令各自的五行產出五份 ICS。"""
 
 from __future__ import annotations
 
 import argparse
+from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from ganzhi import day_pillar
+from yueling import month_commands
 
 WUXING_CALENDARS = {
     "木": {
         "filename": "mu.ics",
         "name": "日柱·木",
-        "members": "甲乙寅卯",
         "color": "#2E7D32",
     },
     "火": {
         "filename": "huo.ics",
         "name": "日柱·火",
-        "members": "丙丁巳午",
         "color": "#C62828",
     },
     "土": {
         "filename": "tu.ics",
         "name": "日柱·土",
-        "members": "戊己丑辰未戌",
         "color": "#F9A825",
     },
     "金": {
         "filename": "jin.ics",
         "name": "日柱·金",
-        "members": "庚辛申酉",
         "color": "#C9A227",
     },
     "水": {
         "filename": "shui.ics",
         "name": "日柱·水",
-        "members": "壬癸亥子",
         "color": "#1565C0",
     },
 }
 
 PRODID = "-//ganzhi-calendar//NONSGML 日柱//ZH"
 DOMAIN = "ganzhi-calendar.local"
+
+
+@dataclass(frozen=True)
+class CalendarEvent:
+    start: date
+    end_exclusive: date
+    title: str
+    uid: str
+    description: str
+    wuxing: str
 
 
 def _fold(line: str) -> str:
@@ -74,26 +81,22 @@ def _ics_text(value: str) -> str:
     )
 
 
-def _vevent(d: date, title: str, kind: str, stamp: str) -> list[str]:
-    next_day = d + timedelta(days=1)
-    label = "天干" if kind == "gan" else "地支"
+def _vevent(event: CalendarEvent, stamp: str) -> list[str]:
     return [
         "BEGIN:VEVENT",
-        f"UID:ganzhi-{d.strftime('%Y%m%d')}-{kind}@{DOMAIN}",
+        f"UID:{event.uid}",
         f"DTSTAMP:{stamp}",
-        f"DTSTART;VALUE=DATE:{d.strftime('%Y%m%d')}",
-        f"DTEND;VALUE=DATE:{next_day.strftime('%Y%m%d')}",
-        f"SUMMARY:{_ics_text(title)}",
-        f"DESCRIPTION:{label}",
+        f"DTSTART;VALUE=DATE:{event.start.strftime('%Y%m%d')}",
+        f"DTEND;VALUE=DATE:{event.end_exclusive.strftime('%Y%m%d')}",
+        f"SUMMARY:{_ics_text(event.title)}",
+        f"DESCRIPTION:{_ics_text(event.description)}",
         "TRANSP:TRANSPARENT",
         "STATUS:CONFIRMED",
         "END:VEVENT",
     ]
 
 
-def build_calendar(
-    name: str, color: str, events: list[tuple[date, str, str]], stamp: str
-) -> str:
+def build_calendar(name: str, color: str, events: list[CalendarEvent], stamp: str) -> str:
     lines = [
         "BEGIN:VCALENDAR",
         "VERSION:2.0",
@@ -103,8 +106,8 @@ def build_calendar(
         f"X-WR-CALNAME:{_ics_text(name)}",
         f"X-APPLE-CALENDAR-COLOR:{color}",
     ]
-    for d, title, kind in events:
-        lines.extend(_vevent(d, title, kind, stamp))
+    for event in events:
+        lines.extend(_vevent(event, stamp))
     lines.append("END:VCALENDAR")
     return "\r\n".join(_fold(line) for line in lines) + "\r\n"
 
@@ -116,12 +119,50 @@ def daterange(start: date, end: date):
         day += timedelta(days=1)
 
 
-def generate(start: date, end: date, output_dirs: list[Path]) -> dict[str, int]:
-    grouped: dict[str, list[tuple[date, str, str]]] = {key: [] for key in WUXING_CALENDARS}
+def collect_events(start: date, end: date) -> list[CalendarEvent]:
+    events: list[CalendarEvent] = []
     for day in daterange(start, end):
         pillar = day_pillar(day)
-        grouped[pillar.wuxing].append((day, pillar.stem, "gan"))
-        grouped[pillar.branch_wuxing].append((day, pillar.branch, "zhi"))
+        next_day = day + timedelta(days=1)
+        stamp = day.strftime("%Y%m%d")
+        events.append(
+            CalendarEvent(
+                start=day,
+                end_exclusive=next_day,
+                title=pillar.stem,
+                uid=f"ganzhi-{stamp}-gan@{DOMAIN}",
+                description="天干",
+                wuxing=pillar.wuxing,
+            )
+        )
+        events.append(
+            CalendarEvent(
+                start=day,
+                end_exclusive=next_day,
+                title=pillar.branch,
+                uid=f"ganzhi-{stamp}-zhi@{DOMAIN}",
+                description="地支",
+                wuxing=pillar.branch_wuxing,
+            )
+        )
+    for command in month_commands(start, end):
+        events.append(
+            CalendarEvent(
+                start=command.start,
+                end_exclusive=command.end_exclusive,
+                title=command.title,
+                uid=f"yueling-{command.start.strftime('%Y%m%d')}-{command.branch}@{DOMAIN}",
+                description=f"月令 {command.ganzhi}",
+                wuxing=command.branch_wuxing,
+            )
+        )
+    return events
+
+
+def generate(start: date, end: date, output_dirs: list[Path]) -> dict[str, int]:
+    grouped: dict[str, list[CalendarEvent]] = {key: [] for key in WUXING_CALENDARS}
+    for event in collect_events(start, end):
+        grouped[event.wuxing].append(event)
 
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     counts = {key: len(items) for key, items in grouped.items()}
@@ -135,7 +176,7 @@ def generate(start: date, end: date, output_dirs: list[Path]) -> dict[str, int]:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="產生天干地支五行 ICS 日曆")
+    parser = argparse.ArgumentParser(description="產生天干地支與月令 ICS 日曆")
     parser.add_argument("--start-year", type=int, default=2024)
     parser.add_argument("--end-year", type=int, default=2029)
     parser.add_argument(
@@ -158,7 +199,7 @@ def main() -> None:
     counts = generate(start, end, [args.out, public_calendars])
 
     total = sum(counts.values())
-    print(f"已產出 {start.isoformat()} 至 {end.isoformat()}，共 {total} 筆（每天天干+地支）：")
+    print(f"已產出 {start.isoformat()} 至 {end.isoformat()}，共 {total} 筆：")
     for wuxing, meta in WUXING_CALENDARS.items():
         print(f"  {meta['name']} ({meta['filename']}): {counts[wuxing]} 筆")
     print(f"輸出目錄：{args.out} 與 {public_calendars}")
