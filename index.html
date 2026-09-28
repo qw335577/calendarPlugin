@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>日柱天干地支 · iPhone 日曆訂閱</title>
+  <style>
+    :root {
+      --bg: #f6f1e8;
+      --ink: #1f1a14;
+      --muted: #5c5348;
+      --card: #fffdf8;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.6;
+    }
+    main {
+      max-width: 40rem;
+      margin: 0 auto;
+      padding: 2.5rem 1.25rem 4rem;
+    }
+    h1 { font-size: 1.75rem; margin: 0 0 0.5rem; }
+    p.lead { color: var(--muted); margin-top: 0; }
+    ol { padding-left: 1.2rem; }
+    .grid {
+      display: grid;
+      gap: 0.75rem;
+      margin: 1.5rem 0;
+    }
+    a.cal {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      text-decoration: none;
+      color: inherit;
+      background: var(--card);
+      border-radius: 0.85rem;
+      padding: 0.9rem 1rem;
+      border: 1px solid rgba(0,0,0,0.06);
+      box-shadow: 0 1px 0 rgba(0,0,0,0.04);
+    }
+    .swatch {
+      width: 1.1rem;
+      height: 1.1rem;
+      border-radius: 999px;
+      margin-right: 0.7rem;
+      flex: none;
+    }
+    .left { display: flex; align-items: center; }
+    .hint { font-size: 0.85rem; color: var(--muted); }
+    code {
+      font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+      font-size: 0.85em;
+      background: #efe6d6;
+      padding: 0.1em 0.35em;
+      border-radius: 0.3em;
+    }
+    .note {
+      background: var(--card);
+      border-radius: 0.85rem;
+      padding: 1rem 1.1rem;
+      border: 1px solid rgba(0,0,0,0.06);
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>日柱天干地支</h1>
+    <p class="lead">在 iPhone 日曆訂閱五本日曆後，每天會出現全天事件，標題為當日干支，顏色依日干五行。</p>
+
+    <div class="grid" id="links">
+      <a class="cal" data-file="mu.ics" href="calendars/mu.ics">
+        <span class="left"><span class="swatch" style="background:#2E7D32"></span>日柱·木（甲乙）</span>
+        <span class="hint">訂閱</span>
+      </a>
+      <a class="cal" data-file="huo.ics" href="calendars/huo.ics">
+        <span class="left"><span class="swatch" style="background:#C62828"></span>日柱·火（丙丁）</span>
+        <span class="hint">訂閱</span>
+      </a>
+      <a class="cal" data-file="tu.ics" href="calendars/tu.ics">
+        <span class="left"><span class="swatch" style="background:#F9A825"></span>日柱·土（戊己）</span>
+        <span class="hint">訂閱</span>
+      </a>
+      <a class="cal" data-file="jin.ics" href="calendars/jin.ics">
+        <span class="left"><span class="swatch" style="background:#C9A227"></span>日柱·金（庚辛）</span>
+        <span class="hint">訂閱</span>
+      </a>
+      <a class="cal" data-file="shui.ics" href="calendars/shui.ics">
+        <span class="left"><span class="swatch" style="background:#1565C0"></span>日柱·水（壬癸）</span>
+        <span class="hint">訂閱</span>
+      </a>
+    </div>
+
+    <h2>在 iPhone 上加入</h2>
+    <ol>
+      <li>先把這個網站放到可公開的 HTTPS 網址（例如 GitHub Pages）。本機 <code>file://</code> 無法讓系統日曆訂閱。</li>
+      <li>用 Safari 打開本頁，依序點上面五個「訂閱」。若沒有跳出加入日曆，改走：設定 → 行事曆 → 帳號 → 新增帳號 → 其他 → 加入訂閱的行事曆，貼上各日曆的網址。</li>
+      <li>在日曆 App 左上角日曆列表裡確認五本都已開啟。若顏色不對，點「i」自行改成綠 / 紅 / 黃 / 金 / 藍。</li>
+    </ol>
+
+    <div class="note">
+      <p>涵蓋 2024-01-01 至 2029-12-31。事件為全天、不佔忙碌。日柱依萬年曆（當天 0:00 換日），不是八字 23:00 換日。</p>
+      <p class="hint" id="url-hint"></p>
+    </div>
+  </main>
+  <script>
+    const httpsPage = location.protocol === "https:";
+    const base = location.href.replace(/index\.html(?:[?#].*)?$/, "");
+    document.querySelectorAll("a.cal").forEach((link) => {
+      const file = link.getAttribute("data-file");
+      const httpsUrl = new URL("calendars/" + file, base).href;
+      if (httpsPage) {
+        link.href = httpsUrl.replace(/^https:/, "webcal:");
+      } else {
+        link.href = "calendars/" + file;
+      }
+    });
+    const hint = document.getElementById("url-hint");
+    if (httpsPage) {
+      hint.textContent = "這五本日曆的網址會自動改成 webcal://，方便 iPhone 直接加入。";
+    } else {
+      hint.textContent = "目前不是 HTTPS 頁面，連結先指向本機 ICS 檔。放到 GitHub Pages 後再用 Safari 打開即可訂閱。";
+    }
+  </script>
+</body>
+</html>
